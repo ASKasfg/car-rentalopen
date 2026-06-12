@@ -1,19 +1,27 @@
 const { Pool } = require('pg');
 
-// Настройки подключения к PostgreSQL (без пароля)
+// Используем переменную окружения DATABASE_URL, которую задали на Render
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+    console.error('❌ Ошибка: переменная окружения DATABASE_URL не задана!');
+    console.error('   Убедитесь, что вы добавили её в настройках Web Service на Render');
+    process.exit(1); // Останавливаем сервер, так как без БД он не может работать
+}
+
+// Создаём пул соединений
 const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'car_rental',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '', // Пустой пароль
+    connectionString: connectionString,
+    ssl: {
+        rejectUnauthorized: false, // Обязательно для Render (и большинства облачных БД)
+    },
 });
 
-// Проверка подключения
+// Проверка подключения при старте
 pool.connect((err, client, release) => {
     if (err) {
         console.error('❌ Ошибка подключения к PostgreSQL:', err.message);
-        console.log('💡 Убедитесь, что PostgreSQL запущен и база данных car_rental существует');
+        console.error('   Строка подключения:', connectionString.replace(/:[^:@]*@/, ':****@')); // скрываем пароль
     } else {
         console.log('✅ PostgreSQL подключен успешно');
         release();
