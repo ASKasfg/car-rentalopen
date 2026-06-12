@@ -25,27 +25,20 @@ function Catalog() {
   }, []);
 
   const searchVehicles = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filters.startDate && filters.endDate) {
-        params.append('startDate', filters.startDate.toISOString());
-        params.append('endDate', filters.endDate.toISOString());
-      }
-      if (filters.class) params.append('class', filters.class);
-      if (filters.minPrice) params.append('minPrice', filters.minPrice);
-      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-      
-      const response = await api.get(`/api/vehicles/search?${params.toString()}`);
-      setVehicles(response.data.vehicles);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Ошибка загрузки автомобилей');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  setLoading(true);
+  try {
+    // ЖЁСТКИЙ URL – для теста
+    const response = await fetch('https://car-rental-yao7.onrender.com');
+    const data = await response.json();
+    console.log('Данные от API:', data);
+    setVehicles(data.vehicles || []);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    alert('Ошибка загрузки');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleBook = (vehicle) => {
     if (!user) {
       alert('Пожалуйста, войдите в систему для бронирования');
