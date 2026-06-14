@@ -22,30 +22,48 @@ function Catalog() {
 
   useEffect(() => {
     searchVehicles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const searchVehicles = async () => {
-  setLoading(true);
-  try {
-    // ЖЁСТКИЙ URL – для теста
-    const response = await fetch('https://car-rental-yao7.onrender.com');
-    const data = await response.json();
-    console.log('Данные от API:', data);
-    setVehicles(data.vehicles || []);
-  } catch (error) {
-    console.error('Ошибка:', error);
-    alert('Ошибка загрузки');
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.startDate && filters.endDate) {
+        params.append('startDate', filters.startDate.toISOString());
+        params.append('endDate', filters.endDate.toISOString());
+      }
+      if (filters.class) params.append('class', filters.class);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      
+      // ВАЖНО: путь должен начинаться с /api/
+      const response = await api.get(`/api/vehicles/search?${params.toString()}`);
+      console.log('API response:', response.data);
+      
+      // API возвращает { success: true, vehicles: [...] }
+      if (response.data && response.data.vehicles) {
+        setVehicles(response.data.vehicles);
+      } else if (Array.isArray(response.data)) {
+        setVehicles(response.data);
+      } else {
+        console.error('Неожиданный формат ответа:', response.data);
+        setVehicles([]);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки:', error);
+      alert('Ошибка загрузки автомобилей. Проверьте соединение с сервером.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBook = (vehicle) => {
     if (!user) {
       alert('Пожалуйста, войдите в систему для бронирования');
       navigate('/login');
       return;
     }
-    
     addToCart(vehicle, filters.startDate, filters.endDate);
     navigate('/cart');
   };
@@ -137,6 +155,9 @@ function Catalog() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
           gap: '20px' 
         }}>
+          {vehicles.length === 0 && !loading && (
+            <div style={{ textAlign: 'center', gridColumn: '1/-1' }}>Нет доступных автомобилей</div>
+          )}
           {vehicles.map(vehicle => (
             <div key={vehicle.id} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', backgroundColor: 'white' }}>
               <img 
@@ -146,7 +167,7 @@ function Catalog() {
               />
               <h3>{vehicle.brand} {vehicle.model} ({vehicle.year})</h3>
               <p>Класс: {vehicle.class}</p>
-              <p>КПП: {vehicle.transmission}</p>
+              <p>КПП: {vehicle.transmission === 'automatic' ? 'Автомат' : 'Механика'}</p>
               <p>Мест: {vehicle.seats}</p>
               <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#007bff' }}>${vehicle.price_per_day}/день</p>
               <button 
